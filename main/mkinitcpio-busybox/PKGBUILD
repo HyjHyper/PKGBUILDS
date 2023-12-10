@@ -1,0 +1,60 @@
+# can't be _mode=cross due to musl-gcc
+_mode=host
+pkgname=mkinitcpio-busybox-kupfer
+pkgdesc="Base initramfs tools"
+pkgver=1.36.0
+pkgrel=1
+_arches=all
+arch=(
+    aarch64
+    armv7h
+    x86_64
+)
+license=(GPL)
+url=https://www.busybox.net
+provides=(mkinitcpio-busybox)
+conflicts=(mkinitcpio-busybox)
+makedepends=(
+    musl
+    kernel-headers-musl
+)
+options=(!buildflags)
+source=(
+    "https://busybox.net/downloads/busybox-$pkgver.tar.bz2"
+    config
+)
+sha256sums=(
+    542750c8af7cb2630e201780b4f99f3dcceeb06f505b479ec68241c1e6af61a5
+    16127776a5097743cfab541efe44862b30c25f2d41859c714993feadc219d96d
+)
+
+prepare() {
+    cd "busybox-$pkgver"
+
+    case "$CARCH" in
+        aarch64)
+            bbmarch=armv8-a
+            ;;
+        armv7h)
+            bbmarch=armv7-a
+            ;;
+        x86_64)
+            bbmarch=x86-64
+            ;;
+    esac
+
+    local safeflags="-march=${bbmarch} -Os -pipe -fno-strict-aliasing"
+
+    sed 's|^\(CONFIG_EXTRA_CFLAGS\)=.*|\1="'"$safeflags"'"|' "$srcdir/config" >.config
+}
+
+build() {
+    # reproducible build
+    export KCONFIG_NOTIMESTAMP=1
+    export CC=musl-gcc CXX=musl-gcc
+    LDFLAGS="$LDFLAGS -static" make -C "busybox-$pkgver" CC=musl-gcc CXX=musl-gcc
+}
+
+package() {
+    install -Dm755 "$srcdir/busybox-$pkgver/busybox" "$pkgdir/usr/lib/initcpio/busybox"
+}

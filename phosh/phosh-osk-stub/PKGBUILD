@@ -1,0 +1,53 @@
+_mode=host
+pkgname=phosh-osk-stub
+pkgdesc="Stub for debugging OSK / input related issues with phosh"
+pkgver=0.28.0.r0.ga0c8313
+pkgrel=1
+_arches=all
+arch=(
+    x86_64
+    aarch64
+)
+license=(GPL3+)
+url=https://gitlab.gnome.org/guidog/phosh-osk-stub
+provides=(phosh-osk)
+conflicts=(phosh-osk)
+depends=(
+    feedbackd
+    phoc
+    libhandy
+    presage
+)
+makedepends=(
+    meson
+    ninja
+)
+_commit=a0c8313d3916be49990e913686ab4d18672f386b
+source=(
+    "git+$url#commit=$_commit"
+)
+sha256sums=(
+    SKIP
+)
+
+pkgver() {
+    cd "$pkgname"
+    git describe --long --tags --abbrev=7 "$_commit" | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+build() {
+    arch-meson ${pkgname} _build
+    # fixme: too high a -j breaks the build
+    ninja -j3 -C _build
+}
+
+package() {
+    DESTDIR="$pkgdir" ninja -C _build install
+
+    install -Dm755 _build/src/phosh-osk-stub \
+         "$pkgdir"/usr/bin/phosh-osk-stub
+
+    # presage completion db
+    install -dm755 "$pkgdir"/usr/share/phosh/osk
+    ln -s ../../presage "$pkgdir"/usr/share/phosh/osk/
+}
